@@ -5,7 +5,7 @@
 # This script gathers and displays information about the 
 # computer's system, hardware, network, and resources.
 # Author: Brooks Person
-# Last Updated: 2025-04-30, 2025-05-02
+# Last Updated: 2025-04-30, 2025-05-03
 # Designed for portability in other Jamf environments
 ################################################################
 
@@ -84,13 +84,12 @@ case "$model" in
   ;;
 esac
 # Detect whether chip is Apple Silicon or Intel and format string accordingly (simplified)
-CHIP_RAW=$(sysctl -n machdep.cpu.brand_string 2>/dev/null)
-if [[ "$CHIP_RAW" == *"Apple"* ]]; then
-  CHIP=$(echo "$CHIP_RAW" | sed 's/.*Apple //')
-  CHIP="Apple $CHIP"
-else
-  CHIP=$(echo "$CHIP_RAW" | sed -E 's/^.*(Intel\(R\) .*?)( CPU|$).*/\1/' | sed 's/Intel(R) //')
-  CHIP="Intel $CHIP"
+CHIP=$(system_profiler SPHardwareDataType | awk -F ':' '/Chip/ {print $2}' | xargs)
+# Fallback for Intel Macs if Chip is empty
+if [[ -z "$CHIP" ]]; then
+  raw_chip=$(sysctl -n machdep.cpu.brand_string)
+  # Example: "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz"
+  CHIP=$(echo "$raw_chip" | grep -oE 'Intel.*?Core.*?i[3579]' | sed 's/(TM)//g' | sed 's/(R)//g' | xargs)
 fi
 
 # ----- Network Info -----
