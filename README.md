@@ -69,7 +69,7 @@ Jamf Extension Attribute that calculates the date/time of last reboot.
 `laps-swiftdialog.sh` is a SwiftDialog-based interactive script that allows IT support staff to securely retrieve the local administrator password (LAPS) for a Jamf-managed Mac by entering the device’s serial number. It leverages the Jamf Pro API with validated input and clear user feedback.
 
 - Uses **SwiftDialog**
-- Customizable with **Jamf Parameter Inputs (4–1)** for message icons, title, account name
+- Customizable with **Jamf Parameter Inputs (4–11)** for message icons, title, account name
 - Requires Two Keychains for ClientID and ClientSecret
 
 #### Use Case
