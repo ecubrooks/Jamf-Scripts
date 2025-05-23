@@ -1,8 +1,9 @@
-# Jamf and Power Automate Script - Flush Failed MDM
+# 🧑‍💻 Jamf and Power Automate Script - Flush Failed MDM
 
 Flush failed MDM commands on macOS via Power Automate and Jamf.
 
-## Summary
+
+## `create_flush_failed_mdm.sh`
 
 This script checks the last run date and, if the delay threshold is met, sends MDM info to a Power Automate webhook to trigger clearing of failed commands. Intended for use in Jamf with a LaunchDaemon.
 
