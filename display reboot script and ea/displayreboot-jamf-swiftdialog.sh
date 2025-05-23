@@ -4,7 +4,7 @@
 # Script: displayreboot-jamf-swiftdialog.sh
 # Creator: Brooks Person
 # Date Created: 2023-08-16 (Original)
-# Updated: 2025-05-03
+# Updated: 2025-05-03, 2025-05-23
 # Description:
 #  Prompts users to restart their macOS device if uptime exceeds a threshold.
 #  Uses SwiftDialog or Jamf Helper, depending on availability.
@@ -15,16 +15,25 @@
 # ---------------------------
 # Parameters (from Jamf Pro)
 # ---------------------------
-icon="${4:-https://via.placeholder.com/128}"       # Parameter 4: SwiftDialog icon URL or Image
+icon="${4:-https://via.placeholder.com/image}"       # Parameter 4: SwiftDialog icon URL or Image
 localIcon="${5:-/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/ToolbarCustomizeIcon.icns}"  # Parameter 5: Local icon
 orgName="${6:-IT Support}"                         # Parameter 6: Institution name
+DEBUG="${7}"                                       # Parameter 7: Debug enabled if set to true
+
+DEBUG=true
+# ---------------------------
+# Logging for script
+# ---------------------------
+log(){
+    [[ "$DEBUG" == "true" ]] && echo "[DEBUG] $1"
+}
 
 # ---------------------------
 # Get uptime in days
 # ---------------------------
 time_up=$(uptime | grep "days" | awk '{print $3}')
-# Override for testing
-# time_up="7"
+# Local Override for testing
+#time_up="7"
 
 if [ -z "$time_up" ]; then
     echo "Computer has rebooted recently."
@@ -36,7 +45,8 @@ fi
 # ---------------------------
 loggedinuser=$(stat -f %Su /dev/console)
 loggedinuid=$(id -u "$loggedinuser" 2>/dev/null || echo "")
-if [[ -z "$loggedinuser" || "$loggedinuser" == "root" || -z "$loggedinuid" ]]; then
+log "Logged-in user: $loggedinuser | UID: $loggedinuid"
+if [[ $loggedinuser == *"_"* ]] || [[ $loggedinuser == "root" ]] || [[ -z "$loggedinuser" ]] || [[ -z "$loggedinuid" ]]; then
     echo "No standard user logged in. Exiting."
     exit 0
 fi
@@ -46,6 +56,7 @@ fi
 # ---------------------------
 screenSaverCount=$(pgrep -x -U "$loggedinuid" ScreenSaverEngine | wc -l)
 if [[ "$screenSaverCount" -ge 1 ]]; then
+    log "Screen saver is running."
     echo "Screen saver is running. Exiting."
     exit 0
 fi
@@ -69,14 +80,15 @@ swiftprompt(){
         --moveable)
             
     userSelection=$? # Capture the exit code from the selection prompt
-    
+    log "Swift initial prompt code: $userSelection"
+
     # Check if the user clicked "Now" (exit code 2)
     if [[ $userSelection -eq 2 ]]; then
         delaySelection=$($dialogCommandFile \
             --title "Reboot?" \
             --icon "$icon" \
             --message "Make sure all data is saved.\n\nSelect a delay (0, 1, 3, 5 minutes):" \
-            --selecttitle "Delay (minutes)" \
+            --selecttitle "Delay (minutes)",required \
             --selectvalues "0,1,3,5" \
             --button1text "Restart" \
             --button2text "Cancel" \
@@ -87,6 +99,13 @@ swiftprompt(){
         delayExit=$? # Capture the exit code from the delay prompt
         # Parse the user's selected delay in minutes and validate
         selectedDelay=$(echo "$delaySelection" | awk -F ": " '/SelectedOption/ {print $2}' | tr -d '"')
+        
+        # Make sure it's numeric before continuing
+        if [[ ! "$selectedDelay" =~ ^[0-9]+$ ]]; then
+            echo "Invalid delay value: '$selectedDelay'"
+            exit
+        fi
+        
         # If user clicked "Restart"
         if [[ $delayExit -eq 0 ]]; then
             # If delay is 0, restart immediately
@@ -106,11 +125,15 @@ swiftprompt(){
                     --button1text "OK"
                 # Uncomment the following lines to actually trigger delayed restart
                 exitCode=$?
+                log "Dialog exit code: $exitCode"
+                
                 if [[ $exitCode -eq 4 ]]; then
+                    log "Timer expired, dialog closed as expected."
                     echo "Timer expired, dialog closed as expected."
                     # shutdown -r +$selectedDelay
                     exit 0
                 else
+                    log "User exited dialog."
                     echo "User exited dialog."
                     # shutdown -r +$selectedDelay
                     exit 0
@@ -146,6 +169,8 @@ jamfprompt(){
         $windowlocation -icon "$localIcon" -title "Reboot Needed" \
         -description "Your computer has not been restarted in $time_up days. Restart now?" \
         -button2 "Now" -button1 "Cancel" -cancelButton "1")
+    
+    log "Jamfhelper initial prompt exit code: $jamfselection"
 
     # If user chooses "Now" (button2), show delay options
     if [[ "$jamfselection" == "2" ]]; then
@@ -159,6 +184,7 @@ Select a delay: Now, 1, 3, or 5 minutes." \
 
         # Get numeric value representing delay time 
         timeChosen="${delayPrompt%?}"
+        log "Jamf prompt exit code: $timeChosen"
         
         case "$delayPrompt" in
             *2) # If "Restart" was selected
@@ -201,7 +227,10 @@ $orgName" -button1 "OK" -cancelButton "1"
 # ---------------------------
 dialogCommandFile="/usr/local/bin/dialog"
 if [[ -x "$dialogCommandFile" ]]; then
+    log "Display reboot using Swift Dialog"
     swiftprompt
 else
+    log "Display reboot using Jamf Helper"
     jamfprompt
 fi
+            
