@@ -53,6 +53,7 @@ case "$OSMAJOR" in
   13) OSNAME="Ventura" ;;
   14) OSNAME="Sonoma" ;;
   15) OSNAME="Sequoia" ;;
+  26) OSNAME="Tahoe" ;;
   *)
     OSNAME="X"
   ;;
