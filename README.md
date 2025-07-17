@@ -11,6 +11,7 @@
 | [`laps-swiftdialog`](./laps-swiftdialog) | Securely retrieves local admin password via Jamf API |
 | [`flush-failed-mdm`](./flush-failed-mdm) | Flushes failed MDM commands using Jamf API. Includes Power Automate Workflow screenshots. |
 | [`poweron-behavior`](./poweron-behavior) | Users can change their Mac's power-on behavior. |
-| [`onedrive-name-fix`](./onedrive-name-fix) | Renames files and folders incompatible with OneDrive sync. Displays results with SwiftDialog and saves a report of changes. |
+| [`onedrive-name-fix`](./onedrive-name-fix) | Renames files and folders incompatible with OneDrive sync. Displays results with SwiftDialog and saves a report of changes. 
+| [`softwareupdate-swiftdialog`](./softwareupdate-swiftdialog) | Prompts users to update minor macOS update within a version and a set deferral to complete.
 
 Each folder contains a `README.md` with setup and usage details.
