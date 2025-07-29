@@ -4,7 +4,7 @@
 # Script: displayreboot-jamf-swiftdialog.sh
 # Creator: Brooks Person
 # Date Created: 2023-08-16 (Original)
-# Updated: 2025-05-03, 2025-05-23
+# Updated: 2025-05-03/23, 2025-07-29
 # Description:
 #  Prompts users to restart their macOS device if uptime exceeds a threshold.
 #  Uses SwiftDialog or Jamf Helper, depending on availability.
@@ -17,10 +17,9 @@
 # ---------------------------
 icon="${4:-https://via.placeholder.com/image}"       # Parameter 4: SwiftDialog icon URL or Image
 localIcon="${5:-/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/ToolbarCustomizeIcon.icns}"  # Parameter 5: Local icon
-orgName="${6:-IT Support}"                         # Parameter 6: Institution name
-DEBUG="${7}"                                       # Parameter 7: Debug enabled if set to true
+orgdeptName="${6:-IT Support}"                         # Parameter 6: Institution name
+DEBUG="${7:-true}"                                       # Parameter 7: Debug enabled if set to true
 
-DEBUG=true
 # ---------------------------
 # Logging for script
 # ---------------------------
@@ -110,7 +109,8 @@ swiftprompt(){
         if [[ $delayExit -eq 0 ]]; then
             # If delay is 0, restart immediately
             if [[ "$selectedDelay" == "0" ]]; then 
-                shutdown -r now
+                log "User selected restart now"
+                #shutdown -r now
             else
                 # Calculate minutes from seconds & show countdown dialog with restart timer
                 timersec=$(($selectedDelay * 60))
@@ -123,17 +123,17 @@ swiftprompt(){
                     --timer "$timersec" \
                     --mini --ontop --position topright \
                     --button1text "OK"
-                # Uncomment the following lines to actually trigger delayed restart
+                # Uncomment the shutdown following lines to actually trigger delayed restart
                 exitCode=$?
                 log "Dialog exit code: $exitCode"
                 
                 if [[ $exitCode -eq 4 ]]; then
                     log "Timer expired, dialog closed as expected."
                     echo "Timer expired, dialog closed as expected."
-                    # shutdown -r +$selectedDelay
+                    # shutdown -r now
                     exit 0
                 else
-                    log "User exited dialog."
+                    log "User exited dialog. $exitCode"
                     echo "User exited dialog."
                     # shutdown -r +$selectedDelay
                     exit 0
@@ -142,16 +142,42 @@ swiftprompt(){
         else
             # User clicked Cancel during delay prompt
             $dialogCommandFile --title "Restart Cancelled" \
-                --icon "$icon" \
-                --message "Please restart your computer at your earliest convenience.\n\nThank you,\n$orgName" \
-                --button1text "OK" --timer 20 --hidetimerbar --mini --ontop --position topright
+            --icon "$icon" \
+            --message "Please restart your computer at your earliest convenience.<br><br>Thank you, ${orgdeptName}" \
+            --messagealigmment "centre" \
+            --button1text "OK" --timer 20 --hidetimerbar --mini --ontop --position topright
+
+            exitCode=$?
+            log "SwiftDialog exited with code: $exitCode"
+            
+            if [[ $exitCode -eq 4 ]]; then
+                log "Dialog timed out — proceeding as expected"
+            else
+                log "Dialog exited with user input"
+            fi
+            
+            # Prevent error by exiting cleanly
+            exit 0
         fi
     else
         # User clicked Cancel in the first prompt
         $dialogCommandFile --title "Restart Cancelled" \
-            --icon "$icon" \
-            --message "Please restart your computer at your earliest convenience.\n\nThank you,\n$orgName" \
-            --button1text "OK" --timer 20 --hidetimerbar --mini --ontop --position topright
+        --icon "$icon" \
+        --message "Please restart your computer at your earliest convenience.<br><br>Thank you, ${orgdeptName}" \
+        --messagealigmment "centre" \
+        --button1text "OK" --timer 20 --hidetimerbar --mini --ontop --position topright
+            
+        exitCode=$?
+        log "SwiftDialog exited with code: $exitCode"
+        
+        if [[ $exitCode -eq 4 ]]; then
+            log "Dialog timed out — proceeding as expected"
+        else
+            log "Dialog exited with user input"
+        fi
+        
+        # Prevent error by exiting cleanly
+        exit 0
     fi
 }
 
@@ -209,7 +235,7 @@ Select a delay: Now, 1, 3, or 5 minutes." \
                     -description "Please restart at your earliest convenience. 
 
 Thank you, 
-$orgName" -button1 "OK"
+${orgdeptName}" -button1 "OK"
                 ;;
         esac
     else
@@ -218,7 +244,7 @@ $orgName" -button1 "OK"
         -alignDescription left -description "Please, restart your computer at earliest convenience.
 
 Thank You,
-$orgName" -button1 "OK" -cancelButton "1" 
+${orgdeptName}" -button1 "OK" -cancelButton "1" 
     fi
 }
 
@@ -228,9 +254,11 @@ $orgName" -button1 "OK" -cancelButton "1"
 dialogCommandFile="/usr/local/bin/dialog"
 if [[ -x "$dialogCommandFile" ]]; then
     log "Display reboot using Swift Dialog"
+    echo "Display reboot using Swift Dialog"
     swiftprompt
 else
     log "Display reboot using Jamf Helper"
+    echo "Display reboot using Jamf Helper"
     jamfprompt
 fi
             
