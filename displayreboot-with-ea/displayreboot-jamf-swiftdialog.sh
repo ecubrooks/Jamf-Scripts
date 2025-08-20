@@ -15,7 +15,7 @@
 # ---------------------------
 # Parameters (from Jamf Pro)
 # ---------------------------
-icon="${4:-https://via.placeholder.com/image}"       # Parameter 4: SwiftDialog icon URL or Image
+icon="${4:-/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/AlertStopIcon.icns}"       # Parameter 4: SwiftDialog icon URL or Image
 localIcon="${5:-/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/ToolbarCustomizeIcon.icns}"  # Parameter 5: Local icon
 orgdeptName="${6:-IT Support}"                         # Parameter 6: Institution name
 DEBUG="${7:-true}"                                       # Parameter 7: Debug enabled if set to true

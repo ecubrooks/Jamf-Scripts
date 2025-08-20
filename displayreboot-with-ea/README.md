@@ -20,6 +20,10 @@ Prompts users to reboot their macOS device if system uptime exceeds a specified 
 - Uncomment time_up to test and shutdown before deploying
 
 ---
+
+![Display Reboot](./displayreboot.png)
+
+---
 ### `lastreboot-ea.sh`
 
 Jamf Extension Attribute that calculates the date/time of last reboot. 
