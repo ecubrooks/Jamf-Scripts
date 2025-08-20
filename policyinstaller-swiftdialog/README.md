@@ -41,6 +41,8 @@ This script provides a SwiftDialog-based user interface for executing one or mor
 
 Running in test mode will simulate each step with a short delay and return a success message for all triggers.
 
+![Jamf Policy Installer](./Jamf%20Policy%20Installer.png)
+
 ---
 
 ### Example Jamf Policy Setup
