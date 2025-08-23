@@ -58,6 +58,8 @@ case "$OSMAJOR" in
     OSNAME="X"
   ;;
 esac
+OSMINOR=$(echo "$OSVersion" | awk -F '.' '{print $2}')
+
 # Retrieve system serial number
 SerialNumber=$(system_profiler SPHardwareDataType | awk '/Serial/ {print $4}')
 # Convert RAM from bytes to GB
@@ -132,7 +134,12 @@ ethernet_active=false
 getssid() {
   WirelessPort=$(/usr/sbin/networksetup -listallhardwareports | /usr/bin/awk '/Wi-Fi|AirPort/{getline; print $NF}')
   #What SSID is the machine connected to
-  SSIDLookup=$(/usr/sbin/ipconfig getsummary "$WirelessPort" | /usr/bin/awk -F ' SSID : ' '/ SSID : / {print $2}')
+  if [[ "$OSMAJOR" -gt 15 ]] || { [[ "$OSMAJOR" -eq 15 ]] && [[ "$OSMINOR" -ge 6 ]]; }; then
+    #very slow but works :(
+    SSIDLookup=$(/usr/libexec/PlistBuddy -c 'Print :0:_items:0:spairport_airport_interfaces:0:spairport_current_network_information:_name' /dev/stdin <<< "$(system_profiler SPAirPortDataType -xml)" 2> /dev/null)
+  else
+    SSIDLookup=$(/usr/sbin/ipconfig getsummary "$WirelessPort" | /usr/bin/awk -F ' SSID : ' '/ SSID : / {print $2}')
+  fi
   echo "$SSIDLookup"
 }
 # Loop through network service order to identify active Wi-Fi/Ethernet
