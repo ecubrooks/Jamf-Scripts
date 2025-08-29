@@ -77,7 +77,7 @@ get_latest_update() {
     LATEST_UPDATE_LABEL=$(echo "$GET_SU" | grep -E "Label: macOS.*${CURRENT_MAJOR}\." | awk -F 'Label: ' '{print $2}' | tail -n 1 | xargs)
     
     if [[ -z "$LATEST_UPDATE" || -z "$LATEST_UPDATE_LABEL" ]]; then
-        echo "ERROR: No matching macOS updates found for version $CURRENT_MAJOR.x. Exiting..."
+        echo "[ERROR] No matching macOS updates found for version $CURRENT_MAJOR.x. Exiting..."
         exit
     fi
 
@@ -87,12 +87,25 @@ get_latest_update() {
     
     # Check for "Deferred: YES" in the block for this label    
     if echo "$GET_SU" | grep -q "Deferred: YES"; then
-        echo "INFO: Latest update is deferred. Exiting."
+        echo "[INFO] Latest update is deferred. Exiting."
         exit      
     fi
     
     export LATEST_UPDATE
     export LATEST_UPDATE_LABEL
+}
+
+check_dialog_binary() {
+    if [[ ! -x "$DIALOG_BIN" ]]; then
+        echo "Dialog not found at $DIALOG_BIN. Attempting to install via Jamf policy..."
+        /usr/local/bin/jamf policy -event trigger #insert a valid trigger to install Swift  
+        sleep 3  # Give some time for installation
+        
+        if [[ ! -x "$DIALOG_BIN" ]]; then
+            echo "Dialog binary still not found after Jamf install attempt. Exiting."
+            exit 1
+        fi
+    fi
 }
 
 test_battery() {
@@ -203,8 +216,8 @@ install_latest_macos_update() { # $1: enforce update
             else
                 echo "[SUCCESS] Update process launched."
                 # Cleanup deferral files after install triggered
-                if [[ -d "$DEFER_DIR" ]]; then
-                    find "$DEFER_DIR" -name "enforce_count_*.txt" -type f -exec rm -f {} +
+                if [[ -f "$DEFER_COUNT_FILE" ]]; then
+                    rm -rf "$DEFER_COUNT_FILE"
                     echo "Cleaned up previous deferral files."
                 fi
                 break
@@ -224,15 +237,15 @@ install_latest_macos_update() { # $1: enforce update
             exit 1
         fi
     else
-
-        softwareupdate --install "$LATEST_UPDATE_LABEL" --restart
         
         # Cleanup deferral files after install triggered
-        if [[ -d "$DEFER_DIR" ]]; then
-            find "$DEFER_DIR" -name "enforce_count_*.txt" -type f -exec rm -f {} +
+        if [[ -f "$DEFER_COUNT_FILE" ]]; then
+            rm -rf "$DEFER_COUNT_FILE"
             echo "Cleaned up previous deferral files."
         fi
-
+        
+        softwareupdate --install "$LATEST_UPDATE_LABEL" --restart
+        echo "[SUCCESS] Update process launched."
     fi
     
     return $?
@@ -275,6 +288,7 @@ show_dialog() {
     --infobuttonaction "$supportURL" \
     --button1text "Update Now" \
     --button2text "Defer" \
+    --ontop \
     --timer 300
 
 }
@@ -321,6 +335,10 @@ fi
 echo "macOS update required. Checking updates..."
 get_latest_update
 
+# Check to make sure dialog binary is valid
+# Remove hash to check for valid binary and/or install via jamf
+#check_dialog_binary
+
 # Show update dialog
 show_dialog
 DIALOG_RESULT=$?
@@ -341,7 +359,7 @@ case "$DIALOG_RESULT" in
             install_latest_macos_update "enforce"
         fi
         ;;
-    3)
+    4)
         echo "Dialog timer expired. Treating as deferral."
         track_deferral
         DEF_RESULT=$?
