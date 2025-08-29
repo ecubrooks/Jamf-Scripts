@@ -37,7 +37,7 @@ fi
 if [[ ! -x "$dialogCommandFile" ]]; then
     echo "ERROR: SwiftDialog binary not found at $dialogCommandFile"
     exit 1
-
+fi
 
 # ----- Gather System Info -----
 # Get various system identifiers
