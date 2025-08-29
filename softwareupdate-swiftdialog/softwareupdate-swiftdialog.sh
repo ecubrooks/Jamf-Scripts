@@ -69,18 +69,28 @@ get_latest_update() {
     
     echo "Current macOS Version: $CURRENT_MAJOR"
     
+    # Get Current Software Updates Available
+    GET_SU=$(softwareupdate --list 2>&1)
+    
     # Find only minor updates for the current macOS major version
-    LATEST_UPDATE=$(softwareupdate --list | grep -E "Title: macOS.*${CURRENT_MAJOR}\.[0-9]+(\.[0-9]+)?" | awk -F '[:,]' '{print $2}' | tail -n 1 | sed 's/^[[:space:]]*//')  # Gets the latest minor update
-    LATEST_UPDATE_LABEL=$(softwareupdate --list 2>&1 | grep -E "Label: macOS.*${CURRENT_MAJOR}\." | awk -F 'Label: ' '{print $2}' | tail -n 1 | xargs)
+    LATEST_UPDATE=$(echo "$GET_SU" | grep -E "Title: macOS.*${CURRENT_MAJOR}\.[0-9]+(\.[0-9]+)?" | awk -F '[:,]' '{print $2}' | tail -n 1 | sed 's/^[[:space:]]*//')  # Gets the latest minor update
+    LATEST_UPDATE_LABEL=$(echo "$GET_SU" | grep -E "Label: macOS.*${CURRENT_MAJOR}\." | awk -F 'Label: ' '{print $2}' | tail -n 1 | xargs)
     
     if [[ -z "$LATEST_UPDATE" || -z "$LATEST_UPDATE_LABEL" ]]; then
-        echo "[ERROR] No matching macOS updates found for version $CURRENT_MAJOR.x"
-        return 1
+        echo "ERROR: No matching macOS updates found for version $CURRENT_MAJOR.x. Exiting..."
+        exit
     fi
 
+    # Report the Title and Lable from Software Update
     echo "Latest macOS update title: $LATEST_UPDATE"
     echo "Latest macOS update label: $LATEST_UPDATE_LABEL"
-
+    
+    # Check for "Deferred: YES" in the block for this label    
+    if echo "$GET_SU" | grep -q "Deferred: YES"; then
+        echo "INFO: Latest update is deferred. Exiting."
+        exit      
+    fi
+    
     export LATEST_UPDATE
     export LATEST_UPDATE_LABEL
 }
