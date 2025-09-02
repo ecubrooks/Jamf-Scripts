@@ -67,10 +67,17 @@ lapss(){  # [l]ocal [a]dministrator [p]assword [s]olution in the [s]tage lane
     
     # Retrieve Client ID & Secret from Keychain
     JAMF_CLIENT_ID=$(security find-generic-password -s "JSSCID" -w 2>/dev/null)
-    JAMF_CLIENT_SECRET=$(security find-generic-password -s "JSSCIDSRT" -w 2>/dev/null)
     # Request Jamf Pro API token using the credentials
-    apiBearerToken=$(/usr/bin/curl -s -X POST "${apiURL}/api/oauth/token" --header 'Content-Type: application/x-www-form-urlencoded' --data-urlencode client_id="$JAMF_CLIENT_ID" --data-urlencode 'grant_type=client_credentials' --data-urlencode client_secret="$JAMF_CLIENT_SECRET" | plutil -extract access_token raw -)
-    
+    apiBearerToken=$(
+    security find-generic-password -s "JSSCIDSRT" -w | tr -d '\n' \
+    | /usr/bin/curl -s -X POST "${apiURL}/api/oauth/token" \
+            -H 'Content-Type: application/x-www-form-urlencoded' \
+            --data "client_id=${JAMF_CLIENT_ID}" \
+            --data 'grant_type=client_credentials' \
+            --data-urlencode client_secret@- \
+    | /usr/bin/plutil -extract access_token raw -
+)
+
     # Validate the API token
     APITokenValidationCheck
     
@@ -167,8 +174,8 @@ lapss(){  # [l]ocal [a]dministrator [p]assword [s]olution in the [s]tage lane
         --message "Expected Local Admin Account NOT found - Exiting." \
         --infobox "**Tech Computer Name**: $DISPLAYNAME <br>
 **Tech Serial Number**: $SERIAL_NUMBER <br>" \
-        --timer 10
-        --hidetimer
+        --timer 10 \
+        --hidetimer \
         --button1 "Exit" \
         --icon "$alertIcon"
         exit

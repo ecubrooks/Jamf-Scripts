@@ -3,7 +3,8 @@
 ## `computerinfo-jamf-swiftdialog`
 
 This script gathers and displays detailed information about a macOS device using [SwiftDialog](https://github.com/bartreardon/swiftDialog). 
-It is designed for use in Jamf Pro environments to provide a user-friendly overview of system, hardware, network, and resource data.
+It is designed for use in Jamf Pro environments to provide a user-friendly overview of system, hardware, network, and resource data.  Helpful for remote support calls to gather information.
+Built off jamf's [Build a Computer Information script for your Help Desk](https://www.jamf.com/blog/build-a-computer-information-script-for-your-help-desk/)
 
 ### 📝 Description
 - Displays system info (macOS version, model, serial number)
@@ -12,6 +13,8 @@ It is designed for use in Jamf Pro environments to provide a user-friendly overv
 - Uses SwiftDialog for clean and interactive UI
 - Deployed via Jamf Self Service
 - Customizable with **Jamf Parameter Inputs (4–9)**
+
+![Computer Info](./systeminfo-screenshot.png)
 
 #### Tested On
 - macOS 	14.x,15.x
