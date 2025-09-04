@@ -59,9 +59,36 @@ APITokenValidationCheck() {
     
     # Confirm the API token is valid by issuing a test request  
     # that returns only the HTTP status code.    
-    api_authentication_check=$(/usr/bin/curl --write-out %{http_code} --silent --output /dev/null "${apiURL}/api/v1/auth" --request GET --header "Authorization: Bearer ${apiBearerToken}")
-    
+    api_authentication_check=$(/usr/bin/curl --write-out "%{http_code}" --silent --output /dev/null "${apiURL}/api/v1/auth" -K - <<EOF
+request = GET
+header = "Authorization: Bearer ${apiBearerToken}"
+EOF
+)
 }
+
+# Invalidate the Bearer Token
+InvalidateJamfProAPIToken() {
+    if [[ -z "$apiBearerToken" ]]; then
+        echo "No token set to invalidate."
+        return 0
+    fi
+    
+    local api_response
+    api_response=$(/usr/bin/curl -s -o /dev/null -w "%{http_code}" \
+        -X POST "${apiURL}/api/v1/auth/invalidate-token" \
+        -H "Authorization: Bearer ${apiBearerToken}" \
+        -H "Accept: application/json")
+    
+    if [[ "$api_response" == "204" ]]; then
+        echo "Token successfully invalidated."
+    else
+        echo "Invalidate request returned HTTP $api_response"
+    fi
+    
+    # Clear it from memory
+    unset apiBearerToken
+}
+
 
 lapss(){  # [l]ocal [a]dministrator [p]assword [s]olution in the [s]tage lane
     
@@ -96,9 +123,12 @@ lapss(){  # [l]ocal [a]dministrator [p]assword [s]olution in the [s]tage lane
     fi
     
     # Determine the computer's Jamf Pro ID via the computer's Serial Number
-    jssID=$( /usr/bin/curl -H "Authorization: Bearer ${apiBearerToken}" -s "${apiURL}"/JSSResource/computers/serialnumber/"${1}"/subset/general | xpath -e "/computer/general/id/text()" )
-    echo "$jssID"
-    
+    jssID=$(/usr/bin/curl -s "${apiURL}/JSSResource/computers/serialnumber/${1}/subset/general" -K - <<EOF | xpath -q -e "/computer/general/id/text()"
+request = GET
+header = "Authorization: Bearer ${apiBearerToken}"
+header = "Accept: application/xml"
+EOF
+)
     # If not found, show an error dialog and allow retry
     if [[ -z "$jssID" ]]; then
         "$DIALOG" --title "Error" --message "Serial number not found in Jamf Pro.<br>Please check serial number and try again." \
@@ -110,19 +140,39 @@ lapss(){  # [l]ocal [a]dministrator [p]assword [s]olution in the [s]tage lane
     
     # Get the computer's Jamf Pro ID via the computer's Serial Number
     # Retrieve various pieces of general and inventory info using the Jamf Pro ID.
-    generalComputerInfo=$( /usr/bin/curl -H "Authorization: Bearer ${apiBearerToken}" -H "Accept: text/xml" -sfk "${apiURL}"/JSSResource/computers/id/"${jssID}/subset/General" -X GET )
+    generalComputerInfo=$(/usr/bin/curl -s "${apiURL}/JSSResource/computers/id/${jssID}/subset/General" -K - <<EOF
+request = GET
+header = "Authorization: Bearer ${apiBearerToken}"
+header = "Accept: text/xml"
+EOF
+)
     computerName=$( echo ${generalComputerInfo} | xpath -q -e "/computer/general/name/text()" )
     computerIpAddress=$( echo ${generalComputerInfo} | xpath -q -e "/computer/general/ip_address/text()" ) 
     computerIpAddressLastReported=$( echo ${generalComputerInfo} | xpath -q -e "/computer/general/last_reported_ip/text()" )
-    computerInventoryGeneral=$( /usr/bin/curl -H "Authorization: Bearer ${apiBearerToken}" -s "${apiURL}/api/v1/computers-inventory/${jssID}?section=GENERAL" -H "accept: application/json" )
-    managementId=$( echo "${computerInventoryGeneral}" | awk '/managementId/{print $NF}' | tr -d '",' )
-    localAdminAccountsRaw=$( /usr/bin/curl -H "Authorization: Bearer ${apiBearerToken}" -s "${apiURL}"/api/v2/local-admin-password/${managementId}/accounts -H "accept: application/json" )
-    username=$( echo "${localAdminAccountsRaw}" | awk '/username/{print $NF}' | tr -d '",' )
+    computerInventoryGeneral=$(/usr/bin/curl -s "${apiURL}/api/v1/computers-inventory/${jssID}?section=GENERAL" -K - <<EOF
+request = GET
+header = "Authorization: Bearer ${apiBearerToken}"
+header = "Accept: application/json"
+EOF
+)
+    managementId=$(echo "${computerInventoryGeneral}" | plutil -extract general.managementId raw -)
+    localAdminAccountsRaw=$(/usr/bin/curl -s "${apiURL}/api/v2/local-admin-password/"${managementId}"/accounts" -K - <<EOF
+request = GET
+header = "Authorization: Bearer ${apiBearerToken}"
+header = "Accept: application/json"
+EOF
+)
+    username=$(echo "${localAdminAccountsRaw}" | awk '/username/{print $NF}' | tr -d '",' )
     
     # Compare Local Admin Account with Username from Jamf Pro 
     if [[ "${username}" == *"${expectedLocalAdminAccount}"* ]]; then
         
-        localAdminPasswordRaw=$( /usr/bin/curl -H "Authorization: Bearer ${apiBearerToken}" -s "${apiURL}"/api/v2/local-admin-password/${managementId}/account/${expectedLocalAdminAccount}/password -H "accept: application/json" )
+        localAdminPasswordRaw=$( /usr/bin/curl -s "${apiURL}/api/v2/local-admin-password/${managementId}/account/${expectedLocalAdminAccount}/password" -K - <<EOF
+request = GET
+header = "Authorization: Bearer ${apiBearerToken}"
+header = "Accept: application/json"
+EOF
+)
         
         admin_password=$( echo "${localAdminPasswordRaw}" | awk '/password/{print $NF}' | tr -d '",' )
         
@@ -165,8 +215,7 @@ lapss(){  # [l]ocal [a]dministrator [p]assword [s]olution in the [s]tage lane
         --moveable 
         
         # Invalidate the Bearer Token
-        apiBearerToken=$( /usr/bin/curl "${apiURL}/api/v1/auth/invalidate-token" --silent  --header "Authorization: Bearer ${apiBearerToken}" -X POST )
-        apiBearerToken=""
+        InvalidateJamfProAPIToken
         
     else
         # Display Prompt Accounts Do Not Match exit script instead of continuing
@@ -174,10 +223,13 @@ lapss(){  # [l]ocal [a]dministrator [p]assword [s]olution in the [s]tage lane
         --message "Expected Local Admin Account NOT found - Exiting." \
         --infobox "**Tech Computer Name**: $DISPLAYNAME <br>
 **Tech Serial Number**: $SERIAL_NUMBER <br>" \
-        --timer 10 \
-        --hidetimer \
+        --mini \
         --button1 "Exit" \
         --icon "$alertIcon"
+        
+        # Invalidate the Bearer Token
+        InvalidateJamfProAPIToken
+        
         exit
         
     fi
