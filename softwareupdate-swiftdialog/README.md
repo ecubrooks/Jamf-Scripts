@@ -11,7 +11,7 @@ This script enforces **minor macOS updates** (within the same major version) by 
 - Enforces updates based on **version requirements**
 - Password prompt for Apple Silicon (`--stdinpass`)
 - Uses **SwiftDialog** for interactions 
-- Customizable with **Jamf Parameter Inputs (4–9)**
+- Customizable with **Jamf Parameter Inputs (4–10)**
 - Cleans tracking files after a successful update and exits if user at loginwindow
 
 ---
@@ -33,6 +33,7 @@ This script enforces **minor macOS updates** (within the same major version) by 
 | 7           | Dialog icon (URL or SF Symbol)         | `https://example.com/icon.png`              |
 | 8           | Support URL                            | `https://support.example.com`               |
 | 9           | Required macOS version                 | `15.5`                                      |
+| 10          | IT Department organization name        | `IT Support`                                |
 
 If omitted, default values will be used.
 
@@ -65,7 +66,8 @@ This script was developed specifically for **Jamf Pro environments**, where:
    - Parameter 7: `https://example.com/icon.png`
    - Parameter 8: `https://support.mysite.com/update-help`
    - Parameter 9: `15.5`
-4. **Scope**: Target Macs below macOS 15.5
+   - Parameter 10: `IT Support`
+4. **Scope**: Target macOs below macOS 15.5, Exclude macOS 15.5+
 
 ---
 
@@ -74,4 +76,5 @@ This script was developed specifically for **Jamf Pro environments**, where:
 - Password is collected using [SwiftDialog secure](https://github.com/swiftDialog/swiftDialog/wiki/Textfields#secure) for Apple Silicon systems.
 - Authentication failures are handled with a retry loop.
 - All prompts are optional until the deferral threshold is reached.
+- The password is passed directly over stdin to softwareupdate --stdinpass and then cleared from memory.
 
