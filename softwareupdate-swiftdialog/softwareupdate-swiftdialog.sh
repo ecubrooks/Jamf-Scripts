@@ -184,22 +184,27 @@ install_latest_macos_update() { # $1: enforce update
     if [[ "$IS_APPLE_SILICON" == "yes" ]]; then
         echo "Using Secure Ownership Auth with --user and --stdinpass"
         
-        local attempt
-        if [[ -z "$1" ]]; then
-            attempt=1  # Optional update
-        else
-            attempt=3  # Enforced update
-        fi
+        local attempt=1
         local max_attempts=3
         local UPDATE_OUTPUT=""
-        local USER_PASS=""
         
         while [[ $attempt -le $max_attempts ]]; do
             
            if ! prompt_for_password; then
                 echo "[INFO] User clicked Cancel in password prompt."
                 track_deferral
-                exit 
+                DEF_RESULT=$?
+                if [[ "$DEF_RESULT" -eq 1 ]]; then
+                    test_battery 
+                    while true; do
+                        if prompt_for_password; then
+                            echo "[SUCCESS] Got password, continue with install..."
+                            break 
+                        else
+                            echo "[INFO] Enforce mode: user canceled, re-prompting..."
+                        fi
+                    done
+                fi
             fi
             
             UPDATE_OUTPUT=$(softwareupdate --install "$LATEST_UPDATE_LABEL" --restart --user "$CURRENT_USER" --stdinpass --verbose <<< "$user_pass" 2>&1) 
@@ -229,7 +234,7 @@ install_latest_macos_update() { # $1: enforce update
             # Display failed on 3 attempts
             $DIALOG_BIN \
             --title "macOS Update Required - Failed" \
-            --message "The macOS update failed due to too many incorrect password attempts.<br>Please contact your $dept_orgname Administrators." \
+            --message "The macOS update failed because there were too many incorrect password attempts.<br>Please contact your $dept_orgname administrators.." \
             --mini \
             --button1text "OK" \
             --infobuttontext "Need Help" \
@@ -355,9 +360,9 @@ case "$DIALOG_RESULT" in
         track_deferral
         DEF_RESULT=$?
         if [[ "$DEF_RESULT" -eq 1 ]]; then
-            echo "Max deferrals reached. Forcing update."
+            echo "Max deferrals reached. Enforcing update."
             test_battery
-            install_latest_macos_update "enforce"
+            install_latest_macos_update
         fi
         ;;
     4)
@@ -365,9 +370,9 @@ case "$DIALOG_RESULT" in
         track_deferral
         DEF_RESULT=$?
         if [[ "$DEF_RESULT" -eq 1 ]]; then
-            echo "Max deferrals reached. Forcing update."
+            echo "Max deferrals reached. Enforcing update."
             test_battery
-            install_latest_macos_update "enforce"
+            install_latest_macos_update
         fi
         ;;
     10)
@@ -375,9 +380,9 @@ case "$DIALOG_RESULT" in
         track_deferral
         DEF_RESULT=$?
         if [[ "$DEF_RESULT" -eq 1 ]]; then
-            echo "Max deferrals reached. Forcing update."
+            echo "Max deferrals reached. Enforcing update."
             test_battery
-            install_latest_macos_update "enforce"
+            install_latest_macos_update
         fi
         ;;
     *)
