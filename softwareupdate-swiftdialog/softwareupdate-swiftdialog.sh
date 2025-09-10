@@ -202,6 +202,7 @@ install_latest_macos_update() { # $1: enforce update
                             break 
                         else
                             echo "[INFO] Enforce mode: user canceled, re-prompting..."
+                            sleep 1
                         fi
                     done
                 fi
