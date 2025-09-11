@@ -21,10 +21,10 @@
 #   
 ########################################################################
 
-launchDaemonPath="[REDACTED_LAUNCHDAEMON_PATH]"
+launchDaemonPath="/Library/LaunchDaemons/[INSERT_LAUNCHDAEMON_PLIST]"  # create a launch deamon plist name
 label=$(basename $launchDaemonPath | sed 's/.plist//')
 
-scriptPath="/Library/Scripts/flushfailedmdm.sh"
+scriptPath="/Library/Scripts/.[INSERT_SCRIPT_NAME.SH]" # create a script name (hidden)
 
 if [[ -f "$scriptPath" ]]; then
 	rm $scriptPath
@@ -96,7 +96,8 @@ flushMDM(){
 EOF
 )
 	
-	curl "$paurl" -X POST -H 'Content-Type: application/json' -d "$content"
+	echo "$content" | curl "$paurl" -X POST -H 'Content-Type: application/json' -d @-
+
 }
 
 
@@ -162,7 +163,7 @@ fi
 EndOfScript
 
 chown root:wheel "$scriptPath"
-chmod 755 "$scriptPath"
+chmod 700 "$scriptPath"
 
 if [[ -f "$launchDaemonPath" ]]; then
 	launchctl bootout system "$launchDaemonPath"
