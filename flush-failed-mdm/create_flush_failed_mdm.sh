@@ -6,6 +6,8 @@
 # Script will create script and launch Deamon plist to flush jamf MDM 
 # via Microsoft Power Automate
 #
+# Plist with last run under Shared folder.
+#
 # Launch Daemon is set to run this once every hour 
 #
 # Resources
@@ -55,7 +57,7 @@ tee "$scriptPath" << "EndOfScript"
 #
 # URL must be generated in Power Automate before running.
 # The input from Parameter 4 is sent in from jamf for curl but 
-# can be added manually in script to run locally.  Exits if missing. 																
+# can be added manually in script to run locally.  Exits if missing. 
 #   
 ########################################################################
 
