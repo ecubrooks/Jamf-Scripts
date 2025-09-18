@@ -190,7 +190,7 @@ install_latest_macos_update() { # $1: enforce update
         
         while [[ $attempt -le $max_attempts ]]; do
             
-           if ! prompt_for_password; then
+            if ! prompt_for_password; then
                 echo "[INFO] User clicked Cancel in password prompt."
                 track_deferral
                 DEF_RESULT=$?
@@ -205,7 +205,11 @@ install_latest_macos_update() { # $1: enforce update
                             sleep 1
                         fi
                     done
+                else
+                    echo "[INFO] Deferral allowed. Exiting."
+                    exit 0  
                 fi
+                
             fi
             
             UPDATE_OUTPUT=$(softwareupdate --install "$LATEST_UPDATE_LABEL" --restart --user "$CURRENT_USER" --stdinpass --verbose <<< "$user_pass" 2>&1) 
