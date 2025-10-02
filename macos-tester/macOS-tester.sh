@@ -49,7 +49,7 @@ ICON_PARAM="${7:-}"      # optional: override icon path
 # SwiftDialog and application paths (csv)
 CURRENTUSER=$(/usr/sbin/scutil <<< "show State:/Users/ConsoleUser" | awk '/Name :/ && !/loginwindow/ { print $3 }')
 DIALOG="${DIALOG_PARAM:-/usr/local/bin/dialog}"
-RESULTS_DIR="/Users/$CURRENTUSER/Desktop/"
+RESULTS_DIR="/Users/$CURRENTUSER/Desktop"
 STAMP="$(date +"%Y%m%d-%H%M%S")"
 CSV_PATH="${RESULTS_DIR}/os-upgrade-validation-${STAMP}.csv"
 
@@ -115,7 +115,6 @@ downloadswiftDialog() {
     error "Could not determine latest SwiftDialog release URL."
   fi
 }
-
 
 # HELPER: checkdialog
 # Checks SwiftDialog exists at $DIALOG before showing any UI.
@@ -393,12 +392,12 @@ checkmdm() {
 # Dialog Application Test(s)
 ########################################################################################
       
-# APP TEST: testoneapp
+# APP TEST: testeachapp
 # Tests app spec (bundle id OR full path) to help find .app path; 
 # Read version/build metadata for CSV
 # Launch the app quietly and Prompt the tester via SwiftDialog: Button1 → "Works", Button2 → "Doesn’t work" and notes field for context/recommendations
 # Append the outcome and notes to the CSV
-testoneapp() {
+testeachapp() {
   local app_spec="$1"
   local app_path
   app_path="$(resolveapppath "$app_spec")"
@@ -414,7 +413,7 @@ testoneapp() {
     BUNDLE_ID="(unknown)"
   fi
   # Launch quietly
-  /usr/bin/open -gj "$app_path" >/dev/null 2>&1
+  /usr/bin/open -g "$app_path" >/dev/null 2>&1
   sleep 2
 
   # Ask tech for result
@@ -473,7 +472,7 @@ done
 # 4) Intro dialog summarizing the current Mac and tester; allow cancel
 # 5) Run system/network/MDM/security checks (each writes rows to the CSV)
 # 6) Build the application list (Jamf param > array > Safari fallback)
-# 7) For each app, run testoneapp() and collect a CSV row
+# 7) For each app, run testeachapp() and collect a CSV row
 # 8) Summary dialog: instruct tester to review and click "Open CSV"; then open the file
 # 9) Exit with status 0 if the script completes (even if some checks/apps failed)
 ########################################################################################
@@ -514,7 +513,7 @@ for app_id in "${APPS[@]}"; do
   if [[ -z "$app_id" ]]; then 
     continue
   fi
-  testoneapp "$app_id"
+  testeachapp "$app_id"
 done
 
 # Final summary dialog
