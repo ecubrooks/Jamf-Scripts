@@ -14,7 +14,7 @@ Built off jamf's [Build a Computer Information script for your Help Desk](https:
 - Deployed via Jamf Self Service
 - Customizable with **Jamf Parameter Inputs (4–9)**
 
-![Computer Info](./systeminfo-screenshot.png)
+![Display Reboot](./displayreboot.png)
 
 #### Tested On
 - macOS 	14.x,15.x

@@ -10,6 +10,8 @@ SwiftDialog progress UI for running **Jamf Manage** and **Jamf Recon** with end-
 - Runs `jamf manage` then `jamf recon -endUsername <console user>`.
 - Streams progress updates to users and logs to `/Library/Logs/JamfReconNotification.log`.
 
+![Jamf Recon SwiftDialog Window](./recon-swiftdisplay.png)
+
 ### Requirements
 - **Jamf Pro** agent: `/usr/local/bin/jamf`
 - **SwiftDialog**: `/usr/local/bin/dialog` (or supply a custom path via parameter)
