@@ -114,7 +114,13 @@ test_battery() {
 
     # Detect if it's a MacBook by checking for a battery
     if pmset -g batt | grep -q "InternalBattery"; then
-        # It's a MacBook – get battery percentage
+        
+        # If on AC power, skip the percentage check
+        if pmset -g batt | grep -q "AC Power"; then
+            echo "MacBook detected. On AC power; skipping battery percentage check."
+            return 0
+        fi
+        # It's a MacBook on battery – get battery percentage
         battery_percent=$(pmset -g batt | grep -Eo "\d+%" | head -n1 | cut -d% -f1)
         
         if [[ $battery_percent -lt 50 ]]; then
