@@ -20,7 +20,7 @@ This script enforces **minor macOS updates** (within the same major version) or 
 
 ### Tested On
 
-- macOS 14, 15
+- macOS 14, 15, 26
 - Apple Silicon & Intel Macbook
 
 ---
