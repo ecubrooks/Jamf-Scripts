@@ -1,6 +1,6 @@
 # macOS SoftwareUpdate Enforcement Script using SwiftDialog
 
-This script enforces **minor macOS updates** (within the same major version) by prompting users with [SwiftDialog](https://github.com/bartreardon/swiftDialog) and tracking deferrals. It makes sure that Apple Silicon systems request authentication via password prompt and enforces updates after a set number of deferrals.
+This script enforces **minor macOS updates** (within the same major version) or **major macOS upgrades** by prompting users with [SwiftDialog](https://github.com/bartreardon/swiftDialog) and tracking deferrals. It makes sure that Apple Silicon systems request authentication via password prompt and enforces updates after a set number of deferrals.
 
 ### softwareupdate-swiftdialog
 
@@ -13,6 +13,8 @@ This script enforces **minor macOS updates** (within the same major version) by 
 - Uses **SwiftDialog** for interactions 
 - Customizable with **Jamf Parameter Inputs (4–10)**
 - Cleans tracking files after a successful update and exits if user at loginwindow
+
+![Software Update Display](./softwareupdate-display.png)
 
 ---
 

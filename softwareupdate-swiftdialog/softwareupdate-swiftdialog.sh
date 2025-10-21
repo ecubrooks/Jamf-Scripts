@@ -68,33 +68,66 @@ get_latest_update() {
     # Get the current macOS version
     CURRENT_VERSION=$(get_current_version)
     CURRENT_MAJOR=$(echo "$CURRENT_VERSION" | awk -F'.' '{print $1}')  # Extracts '14' from '14.x.x'
+    REQUIRED_OS_MAJOR=$(echo "$REQUIRED_OS_VERSION" | awk -F'.' '{print $1}' ) # Extracts '14' from '14.x.x'
+    
+    # Decide update vs upgrade based on major
+    if [[ "$REQUIRED_OS_MAJOR" -gt "$CURRENT_MAJOR" ]]; then
+        ACTION="upgrade"
+    else
+        ACTION="update"
+    fi
     
     echo "Current macOS Version: $CURRENT_MAJOR"
     
     # Get Current Software Updates Available
     GET_SU=$(softwareupdate --list 2>&1)
     
+    # Check for "Deferred: YES" in the block for this label    
+    if echo "$GET_SU" | grep -q "Deferred: YES"; then
+        echo "INFO: Latest update or upgrade is deferred. Exiting."
+        exit      
+    fi
+    
     # Find only minor updates for the current macOS major version
     LATEST_UPDATE=$(echo "$GET_SU" | grep -E "Title: macOS.*${CURRENT_MAJOR}\.[0-9]+(\.[0-9]+)?" | awk -F '[:,]' '{print $2}' | tail -n 1 | sed 's/^[[:space:]]*//')  # Gets the latest minor update
     LATEST_UPDATE_LABEL=$(echo "$GET_SU" | grep -E "Label: macOS.*${CURRENT_MAJOR}\." | awk -F 'Label: ' '{print $2}' | tail -n 1 | xargs)
     
-    if [[ -z "$LATEST_UPDATE" || -z "$LATEST_UPDATE_LABEL" ]]; then
-        echo "[ERROR] No matching macOS updates found for version $CURRENT_MAJOR.x. Exiting..."
-        exit
-    fi
-
-    # Report the Title and Lable from Software Update
-    echo "Latest macOS update title: $LATEST_UPDATE"
-    echo "Latest macOS update label: $LATEST_UPDATE_LABEL"
+    # Find major upgrade from the required macOS major version
+    LATEST_UPGRADE=$(echo "$GET_SU" | grep -E "Title: macOS.*${REQUIRED_OS_MAJOR}\.[0-9]+(\.[0-9]+)?" | awk -F '[:,]' '{print $2}' | tail -n 1 | sed 's/^[[:space:]]*//')  # Gets the latest major upgrade
+    LATEST_UPGRADE_LABEL=$(echo "$GET_SU" | grep -E "Label: macOS.*${REQUIRED_OS_MAJOR}\." | awk -F 'Label: ' '{print $2}' | tail -n 1 | xargs)
     
-    # Check for "Deferred: YES" in the block for this label    
-    if echo "$GET_SU" | grep -q "Deferred: YES"; then
-        echo "[INFO] Latest update is deferred. Exiting."
-        exit      
+    # Require matches only for the intended action
+    if [[ "$ACTION" == "update" ]]; then
+        if [[ -z "$LATEST_UPDATE" || -z "$LATEST_UPDATE_LABEL" ]]; then
+            echo "[ERROR] No matching macOS updates found for version $CURRENT_MAJOR.x"
+            return 1
+        fi
     fi
     
+    # Require matches only for the intended action
+    if [[ "$ACTION" == "upgrade" ]]; then
+        if [[ -z "$LATEST_UPGRADE" || -z "$LATEST_UPGRADE_LABEL" ]]; then
+            echo "[ERROR] No matching macOS upgrades found for required major ${REQUIRED_OS_MAJOR}.x"
+            return 1
+        fi
+    fi
+    
+    # Report the Title and Label from Software Update (match the action)
+    if [[ "$ACTION" == "update" ]]; then
+        echo "Latest macOS update title: $LATEST_UPDATE"
+        echo "Latest macOS update label: $LATEST_UPDATE_LABEL"
+    fi
+    
+    if [[ "$ACTION" == "upgrade" ]]; then
+        echo "Latest macOS upgrade title: $LATEST_UPGRADE"
+        echo "Latest macOS upgrade label: $LATEST_UPGRADE_LABEL"
+    fi
+    
+    export ACTION
     export LATEST_UPDATE
     export LATEST_UPDATE_LABEL
+    export LATEST_UPGRADE
+    export LATEST_UPGRADE_LABEL
 }
 
 check_dialog_binary() {
@@ -114,7 +147,6 @@ test_battery() {
 
     # Detect if it's a MacBook by checking for a battery
     if pmset -g batt | grep -q "InternalBattery"; then
-        
         # If on AC power, skip the percentage check
         if pmset -g batt | grep -q "AC Power"; then
             echo "MacBook detected. On AC power; skipping battery percentage check."
@@ -294,17 +326,34 @@ show_dialog() {
     
     remaining_deferrals=$((MAX_DEFERS - CURRENT_DEFERS))
     
-    "$DIALOG_BIN" --title "macOS Update Required" \
+    if [[ "$ACTION" == "upgrade" ]]; then
+        action_word="upgrade"
+        os_label=${LATEST_UPGRADE}
+        title_text="macOS Upgrade Required"
+        button1_text="Upgrade Now"
+    fi
+    
+    if [[ "$ACTION" == "update" ]]; then
+        action_word="update"
+        os_label=${LATEST_UPDATE}
+        title_text="macOS Update Required"
+        button1_text="Update Now"
+    fi
+    
+    "$DIALOG_BIN" --title "$title_text" \
     --titlefont "name=Avenir Next,size=30" \
     --icon "$dialogIcon" \
-    --message "For continued security and compatibility, your Apple computer requires an update to the latest version, **${LATEST_UPDATE}**.<br><br>You may defer the update for an additional **$remaining_deferrals** times before it becomes mandatory.<br><br>Thank you,<br>$dept_orgname" \
+    --message "For continued security and compatibility, your Apple computer requires an $action_word to the latest version, **$os_label**.<br><br>You may defer the $action_word for an additional **$remaining_deferrals** times before it becomes mandatory.<br><br>Thank you,<br>$dept_orgname" \
     --infobox "**Computer Name**: $DISPLAYNAME <br>
 **Serial Number**: $SERIAL_NUMBER <br>
-**macOS Version**: $MACOS_VERSION <br>" \
+**macOS Version**: $MACOS_VERSION <br>
+**Remaining Deferrals**: $remaining_deferrals <br>" \
     --infobuttontext "Need Help" \
     --infobuttonaction "$supportURL" \
-    --button1text "Update Now" \
+    --button1text "$button1_text" \
     --button2text "Defer" \
+    --width 750 \
+    --height 450 \
     --ontop \
     --timer 300
 
