@@ -333,7 +333,7 @@ show_dialog() {
         button1_text="Upgrade Now"
     fi
     
-    if [[ "$ACTION" == "update" ]]; then
+    if [[ -z "$ACTION" || "$ACTION" == "update" ]]; then
         action_word="update"
         os_label=${LATEST_UPDATE}
         title_text="macOS Update Required"
