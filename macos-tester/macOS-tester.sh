@@ -263,13 +263,15 @@ checknetwork() {
     http_code=$(/usr/bin/curl -sSL --max-time 10 --connect-timeout 5 -o /dev/null -w "%{http_code}" "$w")
     http_code="${http_code:-000}"
     
-    if [[ "$http_code" =~ ^[0-9]{3}$ ]] && (( http_code < 500 )); then
+    # Only treat codes > 0 and < 500 as PASS; "000" (no response) will FAIL
+    if [[ "$http_code" =~ ^[0-9]{3}$ ]] && (( http_code > 0 && http_code < 500 )); then
       appendcsvrow "$(date '+%F %T')" "$TESTER_NAME" "$TESTER_EMAIL" \
       "Network: HTTPS $host" "system.network.https" "" "" "reachable" "HTTP ${http_code}"
     else
       appendcsvrow "$(date '+%F %T')" "$TESTER_NAME" "$TESTER_EMAIL" \
       "Network: HTTPS $host" "system.network.https" "" "" "not reachable" "HTTP ${http_code}"
     fi
+
   done
   
   # --- Network profile status (managed Wi-Fi + current SSID) ---
