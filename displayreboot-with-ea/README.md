@@ -17,7 +17,7 @@ Built off jamf's [Build a Computer Information script for your Help Desk](https:
 ![Display Reboot](./displayreboot.png)
 
 #### Tested On
-- macOS 	14.x,15.x
+- macOS 	14.x,15.x,26.x
 - jamfpro 	11.15.x
 
 #### Use Case
