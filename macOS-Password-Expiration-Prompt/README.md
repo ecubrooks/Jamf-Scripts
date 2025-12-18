@@ -1,4 +1,4 @@
-# macOS Password Expiration Prompt (SwiftDialog)
+# macOS Password Expiration Prompt
 
 ### macOS-Password-Expiration-Prompt.sh
 
