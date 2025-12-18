@@ -11,6 +11,7 @@
 | [`flush-failed-mdm`](./flush-failed-mdm) | Flushes failed MDM commands using Jamf API. Includes Power Automate Workflow screenshots. |
 | [`jamfrecon-swiftdialog`](./jamfrecon-swiftdialog) | Displays end-user friendly UI for running jamf recon and manage. |
 | [`laps-swiftdialog`](./laps-swiftdialog) | Securely retrieves local admin password via Jamf API |
+| [`macOS-Password-Expiration-Prompt`](./macOS-Password-Expiration-Prompt) |  Displays password expiration and overdue notification to current user |
 | [`macos-tester`](./macos-tester) | A macOS validation script for guiding a test of apps used on macOS for admins and techs |
 | [`onedrive-name-fix`](./onedrive-name-fix) | Renames files and folders incompatible with OneDrive sync. Displays results with SwiftDialog and saves a report of changes. |
 | [`policyinstaller-swiftdialog`](./policyinstaller-swiftdialog) | Runs one or more Jamf policy triggers using SwiftDialog for visual feedback. |
