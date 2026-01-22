@@ -51,7 +51,10 @@ fi
 
 # ----------- Append Test Flags (after check) -----------
 dialogCommand="$dialogBinary"
-[[ "$operationMode" == "test" ]] && dialogCommand+=" --verbose --resizable"
+if [[ "$operationMode" == "test" ]]; then
+  dialogCommand+=" --verbose --resizable"
+fi
+
 
 # ----------- Parse trigger and label arrays -----------
 if [[ -n "$triggerList" ]]; then
