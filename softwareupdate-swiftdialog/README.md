@@ -1,18 +1,19 @@
-# macOS SoftwareUpdate Enforcement Script using SwiftDialog
+# macOS SoftwareUpdate & Upgrade Enforcement Script using SwiftDialog
 
-This script enforces **minor macOS updates** (within the same major version) or **major macOS upgrades** by prompting users with [SwiftDialog](https://github.com/bartreardon/swiftDialog) and tracking deferrals. It makes sure that Apple Silicon systems request authentication via password prompt and enforces updates after a set number of deferrals.
+This script enforces **minor macOS updates** (within the same major version) or **major macOS upgrades** by prompting users with [SwiftDialog](https://github.com/bartreardon/swiftDialog) and tracking deferrals. It makes sure that Apple Silicon systems request authentication via password prompt and enforces update or upgrade after a set number of deferrals.
 
 ### softwareupdate-swiftdialog
 
 ## 📝 Description
 
 - Supports **Intel** and **Apple Silicon** Macs
-- Uses `softwareupdate` for native macOS patching
-- Enforces updates based on **version requirements**
+- Uses `softwareupdate` for native macOS patching and OS upgrades
+- Enforces macOS minor updates AND major upgrades **version requirements**
 - Password prompt for Apple Silicon (`--stdinpass`)
 - Uses **SwiftDialog** for interactions 
 - Customizable with **Jamf Parameter Inputs (4–10)**
 - Cleans tracking files after a successful update and exits if user at loginwindow
+- Updates and upgrades are limited to what `softwareupdate --list` reports for the device.
 
 ![Software Update Display](./softwareupdate-display.png)
 
@@ -34,7 +35,7 @@ This script enforces **minor macOS updates** (within the same major version) or 
 | 6           | Directory to store deferral count      | `/Library/Application Support/SWUpdate`     |
 | 7           | Dialog icon (URL or SF Symbol)         | `https://example.com/icon.png`              |
 | 8           | Support URL                            | `https://support.example.com`               |
-| 9           | Required macOS version                 | `15.5`                                      |
+| 9           | Required macOS version                 | `26.2`                                      |
 | 10          | IT Department organization name        | `IT Support`                                |
 
 If omitted, default values will be used.
@@ -46,8 +47,8 @@ If omitted, default values will be used.
 This script was developed specifically for **Jamf Pro environments**, where:
 
 - **Jamf's Software Update feature is limited or unreliable**
-- Jamf’s “MDM-command only” workflows somtimes result in **updates failing silently** or **not prompting users**.
-- This script provides **more reliable enforcement**, and **user-friendly dialogs**.
+- Jamf’s “MDM-command only” workflows sometimes result in **updates failing silently** or **not prompting users**.
+- This script provides **more reliable enforcement**, and **user-friendly dialogs** for control for macOS updates and upgrades
 
 ---
 
@@ -67,15 +68,16 @@ This script was developed specifically for **Jamf Pro environments**, where:
    - Parameter 6: `/Library/Application Support/SWUpdate`
    - Parameter 7: `https://example.com/icon.png`
    - Parameter 8: `https://support.mysite.com/update-help`
-   - Parameter 9: `15.5`
+   - Parameter 9: `26.2`
    - Parameter 10: `IT Support`
-4. **Scope**: Target macOs below macOS 15.5, Exclude macOS 15.5+
+4. **Scope**: Target macOs below macOS 26.2, Exclude macOS 26.2+
 
 ---
 
 ## 🔒 Security
 
 - Password is collected using [SwiftDialog secure](https://github.com/swiftDialog/swiftDialog/wiki/Textfields#secure) for Apple Silicon systems.
+- Apple Silicon authentication is required for both updates and major OS upgrades
 - Authentication failures are handled with a retry loop.
 - All prompts are optional until the deferral threshold is reached.
 - The password is passed directly over stdin to softwareupdate --stdinpass and then cleared from memory.

@@ -203,9 +203,9 @@ install_latest_macos_update() { # $1: enforce update
     echo "Checking updates for macOS major version: $CURRENT_MAJOR..."
     
     # Call get_latest_update
-    get_latest_update
-    
-    echo "Installing macOS update: $LATEST_UPDATE_LABEL"
+    # NOTE: Intentionally disabled. Unset if softwareupdate output change(s) between dialog + enforcement
+    # get_latest_update 
+    # echo "Installing macOS update: $LATEST_UPDATE_LABEL"
     
     local IS_APPLE_SILICON
     if [[ "$(sysctl -n hw.optional.arm64 2>/dev/null)" -eq 1 ]]; then
@@ -250,7 +250,16 @@ install_latest_macos_update() { # $1: enforce update
                 
             fi
             
-            UPDATE_OUTPUT=$(softwareupdate --install "$LATEST_UPDATE_LABEL" --restart --user "$CURRENT_USER" --stdinpass --verbose <<< "$user_pass" 2>&1) 
+            # Action to set to install update or upgrade for Apple silicon
+            if [[ "$ACTION" == "update" ]]; then
+                echo "Installing macOS update: $LATEST_UPDATE_LABEL"
+                UPDATE_OUTPUT=$(softwareupdate --install "$LATEST_UPDATE_LABEL" --restart --user "$CURRENT_USER" --stdinpass --verbose <<< "$user_pass" 2>&1)
+            fi
+            
+            if [[ "$ACTION" == "upgrade" ]]; then
+                echo "Installing macOS update: $LATEST_UPGRADE_LABEL"
+                UPDATE_OUTPUT=$(softwareupdate --install "$LATEST_UPGRADE_LABEL" --restart --user "$CURRENT_USER" --stdinpass --verbose <<< "$user_pass" 2>&1)
+            fi
             
             # Check for failure string
             if echo "$UPDATE_OUTPUT" | grep -q "Failed to authenticate"; then
@@ -293,8 +302,21 @@ install_latest_macos_update() { # $1: enforce update
             echo "Cleaned up previous deferral files."
         fi
 
-        softwareupdate --install "$LATEST_UPDATE_LABEL" --restart
-        echo "[SUCCESS] Update process launched."
+        # Cleanup deferral files after install triggered
+        if [[ -f "$DEFER_COUNT_FILE" ]]; then
+            rm -rf "$DEFER_COUNT_FILE"
+            echo "Cleaned up previous deferral files."
+        fi
+        
+        # Install update or upgrade for non Apple silicon
+        if [[ "$ACTION" == "update" ]]; then
+            softwareupdate --install "$LATEST_UPDATE_LABEL" --restart
+        fi
+        
+        if [[ "$ACTION" == "upgrade" ]]; then
+            softwareupdate --install "$LATEST_UPGRADE_LABEL" --restart
+        fi
+        echo "[SUCCESS] Update process launched."    
     fi
     
     return $?
@@ -409,6 +431,9 @@ check_dialog_binary
 show_dialog
 DIALOG_RESULT=$?
 
+ACTION="${ACTION:-update}"
+
+
 case "$DIALOG_RESULT" in
     0)
         echo "User chose to update now."
@@ -420,7 +445,7 @@ case "$DIALOG_RESULT" in
         track_deferral
         DEF_RESULT=$?
         if [[ "$DEF_RESULT" -eq 1 ]]; then
-            echo "Max deferrals reached. Enforcing update."
+            echo "Max deferrals reached. Enforcing $ACTION."
             test_battery
             install_latest_macos_update
         fi
@@ -430,7 +455,7 @@ case "$DIALOG_RESULT" in
         track_deferral
         DEF_RESULT=$?
         if [[ "$DEF_RESULT" -eq 1 ]]; then
-            echo "Max deferrals reached. Enforcing update."
+            echo "Max deferrals reached. Enforcing $ACTION."
             test_battery
             install_latest_macos_update
         fi
@@ -440,7 +465,7 @@ case "$DIALOG_RESULT" in
         track_deferral
         DEF_RESULT=$?
         if [[ "$DEF_RESULT" -eq 1 ]]; then
-            echo "Max deferrals reached. Enforcing update."
+            echo "Max deferrals reached. Enforcing $ACTION."
             test_battery
             install_latest_macos_update
         fi
