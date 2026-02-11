@@ -16,6 +16,8 @@ It runs system, network, security, and MDM checks, then launches selected applic
 - Exports results to a **CSV file** for auditing and sharing
 - Works in **Jamf Self Service** or from the command line
 
+![macOS Tester](./macostester-results.png)
+
 ## Requirements
 
 - macOS 13 – 26  
