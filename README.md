@@ -16,6 +16,6 @@
 | [`onedrive-name-fix`](./onedrive-name-fix) | Renames files and folders incompatible with OneDrive sync. Displays results with SwiftDialog and saves a report of changes. |
 | [`policyinstaller-swiftdialog`](./policyinstaller-swiftdialog) | Runs one or more Jamf policy triggers using SwiftDialog for visual feedback. |
 | [`poweron-behavior`](./poweron-behavior) | Users can change their Mac's power-on behavior. |
-| [`softwareupdate-swiftdialog`](./softwareupdate-swiftdialog) | Prompts users to update minor macOS update within a version and a set deferral to complete. |
+| [`softwareupdate-swiftdialog`](./softwareupdate-swiftdialog) | Prompts users to install required minor updates or major macOS upgrades, with a configurable deferral limit. |
 
 Each folder contains a `README.md` with setup and usage details.
