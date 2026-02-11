@@ -1,3 +1,4 @@
+
 #!/bin/bash
 ########################################################################################
 #
@@ -11,6 +12,7 @@
 #  v1.0  — designed for Jamf, macOS 13–26
 #  Can run from jamf as a Self Service script, uses Swift Dialog
 #  Requires: SwiftDialog (/usr/local/bin/dialog)
+#   v1.1  — improved results viewing & bug fixes
 #
 # AUTHOR
 # Brooks Person 09-30-2025
@@ -137,7 +139,7 @@ osinfo() {
   CPU=$(sysctl -n machdep.cpu.brand_string 2>/dev/null | awk '{print $1}')
   if [[ -z "$CPU" ]]; then
     if /usr/sbin/sysctl -n hw.optional.arm64 2>/dev/null | grep -q 1; then
-      CPU="AppleSilicon"
+      CPU="Apple Silicon"
     else
       CPU="Intel"
     fi
@@ -217,13 +219,13 @@ promptfortester() {
     --icon "$ICON_DEFAULT" \
     --message "You're about to run **macOS system, network, and application tests**.<br><br>We'll check **system** (SIP, FileVault, Bootstrap Token) and **network/MDM** reachability, then open each selected **application one by one** until the test completes.<br><br>Please enter your full name and email so results can be recorded." \
     --textfield "Test Full Name",name="testuser",required \
-    --textfield "Test Email",name="testemail",required \
+    --textfield "Test Email",name="testemail",required,regex="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$",regexerror="Please enter a valid email" \
     --moveable \
     --button1text "Continue" \
     --button2text "Cancel" \
     --json 2>/dev/null)
   if [[ $? -ne 0 ]]; then
-    error "Cancelled by user."
+    log "Cancelled by user."
   fi
   
   TESTER_NAME=$(echo "$out" | grep -o '"testuser" *: *"[^"]*"' | cut -d'"' -f4)
@@ -247,6 +249,7 @@ promptfortester() {
 # Checks for a Managed Wi-Fi profile presence and current SSID observation
 # Checks APNS daemon environment (apsctl) and APNS connectivity by api.push.apple.com on ports 80 and 443 using nc
 checknetwork() {
+  NETWORK_STATUS="PASS"
   # HTTPS reachability for URLs
   local i
   for i in "${!TEST_URLS[@]}"; do
@@ -268,6 +271,7 @@ checknetwork() {
       appendcsvrow "$(date '+%F %T')" "$TESTER_NAME" "$TESTER_EMAIL" \
       "Network: HTTPS $host" "system.network.https" "" "" "reachable" "HTTP ${http_code}"
     else
+      NETWORK_STATUS="FAIL"
       appendcsvrow "$(date '+%F %T')" "$TESTER_NAME" "$TESTER_EMAIL" \
       "Network: HTTPS $host" "system.network.https" "" "" "not reachable" "HTTP ${http_code}"
     fi
@@ -301,6 +305,7 @@ checknetwork() {
       appendcsvrow "$(date '+%F %T')" "$TESTER_NAME" "$TESTER_EMAIL" "Network: Profile (Wi-Fi)" "system.network.profile" "" "" "Info" "Managed Wi-Fi profile present; SSID match: ${ssid:-none}"
     fi
   else
+    NETWORK_STATUS="FAIL"
     appendcsvrow "$(date '+%F %T')" "$TESTER_NAME" "$TESTER_EMAIL" "Network: Profile (Wi-Fi)" "system.network.profile" "" "" "Doesn't Work" "No managed Wi-Fi profile found"
   fi
   
@@ -309,9 +314,10 @@ checknetwork() {
   if [[ -x "$APSCTL" ]]; then
     local apns_status
     apns_status=$("$APSCTL" status 2>/dev/null)
-    if echo "$apns_status" | /usr/bin/grep -E -q 'connection environment:\s+production'; then
+    if [[ "$apns_status" =~ connection[[:space:]]environment:[[:space:]]+production ]]; then
       appendcsvrow "$(date '+%F %T')" "$TESTER_NAME" "$TESTER_EMAIL" "Network: APNS Daemon (prod)" "system.apns.daemon" "" "" "Works" "Connected to production"
     else
+      NETWORK_STATUS="FAIL"
       appendcsvrow "$(date '+%F %T')" "$TESTER_NAME" "$TESTER_EMAIL" "Network: APNS Daemon (prod)" "system.apns.daemon" "" "" "Doesn't Work" "Not connected to production"
       ok=0
     fi
@@ -326,6 +332,7 @@ checknetwork() {
     if /usr/bin/nc -zvw5 "$apns_host" "$port" >/dev/null 2>&1; then
       appendcsvrow "$(date '+%F %T')" "$TESTER_NAME" "$TESTER_EMAIL" "Network: APNS TCP $port" "system.apns.tcp$port" "" "" "Works" "$apns_host:$port reachable"
     else
+      NETWORK_STATUS = "FAIL"
       appendcsvrow "$(date '+%F %T')" "$TESTER_NAME" "$TESTER_EMAIL" "Network: APNS TCP $port" "system.apns.tcp$port" "" "" "Doesn't Work" "$apns_host:$port not reachable"
     fi
   done
@@ -334,13 +341,14 @@ checknetwork() {
 # CHECKS: checksecurity
 # Verifies Bootstrap Token escrow, Filevault and SIP status
 checksecurity() {
-
   # --- Bootstrap Token status ---
   local bt
-  bt=$(/usr/bin/profiles status -type bootstraptoken 2>/dev/null)
-  if echo "$bt" | /usr/bin/grep -qi "escrowed: YES"; then
+  SECURITY_STATUS="PASS"
+  bt=$(/usr/bin/profiles status -type bootstraptoken 2>/dev/null)  
+  if [[ "$bt" == *"supported on server: YES"* && "$bt" == *"escrowed to server: YES"* ]]; then
     appendcsvrow "$(date '+%F %T')" "$TESTER_NAME" "$TESTER_EMAIL" "Security: Bootstrap Token" "system.security.bootstraptoken" "" "" "Works" "$(echo "$bt" | tr -s ' ')"
   else
+    SECURITY_STATUS="FAIL"
     appendcsvrow "$(date '+%F %T')" "$TESTER_NAME" "$TESTER_EMAIL" "Security: Bootstrap Token" "system.security.bootstraptoken" "" "" "Doesn't Work" "$(echo "$bt" | tr -s ' ')"
   fi
   
@@ -350,6 +358,7 @@ checksecurity() {
   if echo "$fv" | /usr/bin/grep -qi "FileVault is On"; then
     appendcsvrow "$(date '+%F %T')" "$TESTER_NAME" "$TESTER_EMAIL" "Security: FileVault" "system.security.filevault" "" "" "Works" "$(echo "$fv" | tr -s ' ')"
   else
+    SECURITY_STATUS="FAIL"
     appendcsvrow "$(date '+%F %T')" "$TESTER_NAME" "$TESTER_EMAIL" "Security: FileVault" "system.security.filevault" "" "" "Doesn't Work" "$(echo "$fv" | tr -s ' ')"
   fi
   
@@ -359,6 +368,7 @@ checksecurity() {
   if echo "$sip" | /usr/bin/grep -qi "enabled"; then
     appendcsvrow "$(date '+%F %T')" "$TESTER_NAME" "$TESTER_EMAIL" "Security: SIP" "system.security.sip" "" "" "Works" "$(echo "$sip" | tr -s ' ')"
   else
+    SECURITY_STATUS="FAIL"
     appendcsvrow "$(date '+%F %T')" "$TESTER_NAME" "$TESTER_EMAIL" "Security: SIP" "system.security.sip" "" "" "Doesn't Work" "$(echo "$sip" | tr -s ' ')"
   fi
 }
@@ -366,13 +376,14 @@ checksecurity() {
 checkmdm() {
   local enrolled="Unknown"
   local mdmline
+  MDM_STATUS="PASS"
   mdmline=$(/usr/bin/profiles status -type enrollment 2>/dev/null)
   if echo "$mdmline" | /usr/bin/grep -qi "Enrolled"; then
     enrolled="Yes"
     appendcsvrow "$(date '+%F %T')" "$TESTER_NAME" "$TESTER_EMAIL" "MDM: Enrollment" "system.mdm.enrollment" "" "" "Works" "$(echo "$mdmline" | tr -s ' ')"
-
   else
     enrolled="No"
+    MDM_STATUS="FAIL"
     appendcsvrow "$(date '+%F %T')" "$TESTER_NAME" "$TESTER_EMAIL" "MDM: Enrollment" "system.mdm.enrollment" "" "" "Doesn't Work" "$(echo "$mdmline" | tr -s ' ')"
   fi
 
@@ -381,8 +392,8 @@ checkmdm() {
     if /usr/local/bin/jamf checkJSSConnection -retry 1 >/dev/null 2>&1; then
       appendcsvrow "$(date '+%F %T')" "$TESTER_NAME" "$TESTER_EMAIL" "MDM: Jamf Connection" "system.mdm.jamf" "" "" "Works" "JSS reachable"
     else
+      MDM_STATUS="FAIL"
       appendcsvrow "$(date '+%F %T')" "$TESTER_NAME" "$TESTER_EMAIL" "MDM: Jamf Connection" "system.mdm.jamf" "" "" "Doesn't Work" "JSS not reachable"
-
     fi
   else
     appendcsvrow "$(date '+%F %T')" "$TESTER_NAME" "$TESTER_EMAIL" "MDM: Jamf Connection" "system.mdm.jamf" "" "" "Info" "jamf binary not present"
@@ -403,7 +414,7 @@ testeachapp() {
   local app_spec="$1"
   local app_path
   app_path="$(resolveapppath "$app_spec")"
-
+  APP_STATUS="PASS"
   if [[ -z "$app_path" || ! -d "$app_path" ]]; then
     appendcsvrow "$(date '+%F %T')" "$TESTER_NAME" "$TESTER_EMAIL" "N/A" "$app_spec" "N/A" "N/A" "Not Found" "Couldn’t find this app"
     return
@@ -435,6 +446,7 @@ testeachapp() {
     result="Works"
   else
     result="Doesn't Work"
+    APP_STATUS="FAIL"
   fi
   notes=$(echo "$prompt_out"  | grep -o '"notes" *: *"[^"]*"' | cut -d'"' -f4)
 
@@ -446,6 +458,41 @@ testeachapp() {
   # Log row with summary
   appendcsvrow "$(date '+%F %T')" "$TESTER_NAME" "$TESTER_EMAIL" "$APP_NAME" "$BUNDLE_ID" "${APP_VER:-}" "${APP_BUILD:-}" "$result" "$notes"
 }
+
+function display_results ()
+{
+  local message="$1"
+  local csv_path="$2"
+  
+  MainDialogBody=(
+    --bannerimage colour=#BFBFBF 
+    --bannertext "$TITLE" 
+    --titlefont "name=Avenir Next,shadow=1"
+    --icon "${ICON_DEFAULT}"
+    --iconsize 128
+    --message "Here are the results for this Mac:<br><br>${message}"
+    --button1text "OK"
+    --button2text "Open CSV"
+    --ontop
+    --width 900
+    --height 750
+    --moveable
+    --infotext "The CSV file is stored at: ${csv_path}"
+  )
+  
+  $($DIALOG "${MainDialogBody[@]}" 2>/dev/null)
+  buttonpress=$?
+  
+  # Button 1 = 0 (OK) -> return
+  if [[ $buttonpress = 0 ]]; then
+    return
+  fi
+  # Button 2 = 2 (Open CSV) -> open CSV
+  if [[ "${buttonpress}" == "2" ]]; then
+    /usr/bin/open "$csv_path"
+  fi
+}
+
 
 ########################################################################################
 # Parse Args
@@ -487,11 +534,11 @@ promptfortester
 # Show intro
 "$DIALOG" --title "$TITLE" \
   --icon "$ICON_DEFAULT" \
-  --message "Click **Start** to run checks now; this script will verify system setting and then open each **application one by one** for a quick ‘Works/Doesn’t Work’ review.<br><br>**macOS ${OS_VER} (${OS_BUILD})** on **${HW_MODEL}**<br><br>Tester: **${TESTER_NAME}** <${TESTER_EMAIL}>" \
+  --message "Click **Start** to run checks now; this script will verify system setting and then open each **application one by one** for a quick ‘Works/Doesn’t Work’ review.<br><br>**macOS ${OS_VER} (${OS_BUILD})** on **{computermodel}**<br><br>Tester: **${TESTER_NAME}** <${TESTER_EMAIL}>" \
   --button1text "Start" \
   --button2text "Cancel" >/dev/null
   if [[ $? -ne 0 ]]; then
-      error "Cancelled by user."
+      log "Cancelled by user."
   fi
 
 # System checks
@@ -519,21 +566,27 @@ for app_id in "${APPS[@]}"; do
 done
 
 # Final summary dialog
+chown "$CURRENTUSER":staff "$CSV_PATH"
+chmod 644 "$CSV_PATH"
+sleep .5
 
-"$DIALOG" \
---title "$TITLE — Summary" \
---icon "$ICON_DEFAULT" \
---message "✅ **Final verification step**<br><br>All checks are complete and CSV saved to:<br><br>**$CSV_PATH**<br><br>Please review the CSV now to confirm entries look correct (tester info, network/MDM rows, each app’s status and notes).<br><br>This window has no Close, Click **Open CSV** to finish." \
---button1text "Open CSV" \
---position center \
---ontop
+#System Status for Results Message includes pass, fail, or unkown status message
+status_badge() {
+  if [[ "$1" == "PASS" ]]; then
+    echo "✅ Pass"
+  elif [[ "$1" == "FAIL" ]]; then
+    echo "❌ Fail"
+  else
+    echo "⚠️ Unknown"
+  fi
+}
 
-if [[ $? -eq 0 ]]; then
-  chown "$CURRENTUSER":staff "$CSV_PATH"
-  chmod 644 "$CSV_PATH"
-  sleep .5
-  /usr/bin/open "$CSV_PATH"
-fi
+# # Results message that is displayed with system check results, including CSV Path
+RESULTS_MSG="**All checks are complete.**<br><br>macOS ${OS_VER} (${OS_BUILD}) on {computermodel}<br>Tester: ${TESTER_NAME} <${TESTER_EMAIL}><br><br>**CSV saved to:**<br>${CSV_PATH}<br><br><br>**Check Summary:**<br>* Network: $(status_badge "$NETWORK_STATUS")<br>
+* MDM: $(status_badge "$MDM_STATUS")<br>
+* Security: $(status_badge "$SECURITY_STATUS")<br>
+* APP: $(status_badge "$APP_STATUS")<br><br>
+<br>Please review the CSV now to confirm entries look correct (tester info, network/MDM rows, each app’s status and notes).<br><br>**Click Open CSV** to download/view it."
 
+display_results "$RESULTS_MSG" "$CSV_PATH"
 exit 0
-      
