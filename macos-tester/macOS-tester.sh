@@ -1,5 +1,5 @@
-
 #!/bin/bash
+
 ########################################################################################
 #
 # ABOUT THIS PROGRAM
@@ -226,6 +226,7 @@ promptfortester() {
     --json 2>/dev/null)
   if [[ $? -ne 0 ]]; then
     log "Cancelled by user."
+    exit
   fi
   
   TESTER_NAME=$(echo "$out" | grep -o '"testuser" *: *"[^"]*"' | cut -d'"' -f4)
@@ -539,6 +540,7 @@ promptfortester
   --button2text "Cancel" >/dev/null
   if [[ $? -ne 0 ]]; then
       log "Cancelled by user."
+      exit
   fi
 
 # System checks
