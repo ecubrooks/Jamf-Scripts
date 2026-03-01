@@ -50,7 +50,7 @@ This script provides a SwiftDialog-based user interface for executing one or mor
 
 Provides a traditional progress-style interface with dynamic list items and status updates.
 
-![List Mode](./images/Jamf Policy Installer.png)
+![List Mode](./images/Jamf%20Policy%20Installer.png)
 
 #### Inspect Mode
 
