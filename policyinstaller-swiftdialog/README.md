@@ -81,7 +81,7 @@ Running in test mode will simulate each step with a short delay and return a suc
   * `$7`: `Install VPN,Configure Settings,Update Inventory`
   * `$8`: `live`
   * `$9`: `https://your-support-url.com/help`
-  * `$10`: `inspect
+  * `$10`: `inspect`
 
 ---
 
