@@ -7,12 +7,18 @@ This script provides a SwiftDialog-based user interface for executing one or mor
 ## 📋 Description
 
 * Accepts Jamf parameters for title, icon, triggers, labels, and support URL
-* Supports **test** modes
+* Supports **test** modes and **live** modes
+* Supports both **List Mode** and **Inspect Mode**
+* Supports SwiftDialog Inspect Mode `preset1` and `preset2`
 * Dynamically builds SwiftDialog list items and progress display
 * Locks the dialog until completion
 * Tracks failure or success of each policy trigger
+* Uses files to track completion in Inspect Mode
 * Optionally installs SwiftDialog if not present
 * Default color is purple for items but can be changed to match org or school.
+
+> ⚠️ It is recommended to use only `preset1` or `preset2` when using Inspect Mode.  
+> Other presets may not behave as expected.
 
 ---
 
@@ -26,7 +32,7 @@ This script provides a SwiftDialog-based user interface for executing one or mor
 | 7         | Comma-separated labels (e.g. `Install VPN,Update Inventory`) |
 | 8         | Operation mode: `test` or `live` *(default: test)*           |
 | 9         | Support URL *(optional)*                                     |
-
+| 10        | UI Mode: `list` (default) or `inspect`                       |
 ---
 
 ### Requirements
@@ -37,11 +43,28 @@ This script provides a SwiftDialog-based user interface for executing one or mor
 
 ---
 
+
+### UI Modes
+
+#### List Mode (Default)
+
+Provides a traditional progress-style interface with dynamic list items and status updates.
+
+![List Mode](./images/Jamf Policy Installer.png)
+
+#### Inspect Mode
+
+Uses SwiftDialog Inspect Mode to monitor file-based completion markers for each step.  
+Designed for more modern workflow tracking using SwiftDialog `preset1` or `preset2`.
+Inspect Mode focuses on presentation and workflow visibility, leveraging SwiftDialog’s modern preset-based interface.
+
+![Inspect Mode - Preset1](./images/inspect-mode-preset1.png)
+
+![Inspect Mode - Preset2](./images/inspect-mode-preset2.png)
+
 ### Test Mode
 
 Running in test mode will simulate each step with a short delay and return a success message for all triggers.
-
-![Jamf Policy Installer](./Jamf%20Policy%20Installer.png)
 
 ---
 
@@ -58,6 +81,7 @@ Running in test mode will simulate each step with a short delay and return a suc
   * `$7`: `Install VPN,Configure Settings,Update Inventory`
   * `$8`: `live`
   * `$9`: `https://your-support-url.com/help`
+  * `$10`: `inspect
 
 ---
 
