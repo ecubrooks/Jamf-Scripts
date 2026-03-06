@@ -26,6 +26,8 @@ This script checks the last run date and, if the delay threshold is met, sends M
 - A configuration profile to populate `/Library/Managed Preferences/info.plist`
   ([Der Flounder guide](https://derflounder.wordpress.com/2023/02/25/providing-jamf-pro-computer-inventory-information-via-macos-configuration-profile/))
 
+---
+
 ## `flush-failed-commands-by-jssid.sh`
 
 This script allows an administrator to manually flush failed MDM commands for a specific computer using the Jamf Computer ID (JSS ID).
@@ -44,7 +46,7 @@ This script allows an administrator to manually flush failed MDM commands for a 
 2. Enter Jamf API credentials when prompted.
 3. Provide the Jamf Computer ID (JSS ID) for the target device.
 
-
+---
 ### Attribution
 
 - Based on ideas from [rtrouton_scripts](https://github.com/rtrouton/rtrouton_scripts)
